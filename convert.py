@@ -11,7 +11,7 @@ import io
 import os
 import shutil
 import tempfile
-from zipfile import Zipfile, ZIP_DEFLATED, ZIP_STORED
+from zipfile import ZipFile, ZIP_DEFLATED, ZIP_STORED
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from lxml import etree
