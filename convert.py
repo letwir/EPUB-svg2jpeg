@@ -187,7 +187,6 @@ def process_single_epub(epub_path, out_path, timeout, font_spec=None):
                                     # detect cover item by properties svg, by href pointing to cover.xhtml, or id containing 'cover'
                                     if ('svg' in props) or href.lower().endswith('cover.xhtml') or 'cover' in iid.lower():
                                         item.set('href', 'images/cover.jpeg')
-                                        item.set('id', 'cover')
                                         item.set('media-type', 'image/jpeg')
                                         if 'properties' in item.attrib:
                                             del item.attrib['properties']
