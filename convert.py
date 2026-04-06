@@ -143,9 +143,9 @@ def insert_cover(
             manifest_tag = manifest.tag
             if "}" in manifest_tag:
                 ns = manifest_tag[1 : manifest_tag.find("}")]
-                item_tag = f"{{{ns}}}item"
+                item_tag = f"{{{ns}}}{child}"
             else:
-                item_tag = "item"
+                item_tag = child
             new_item = etree.Element(item_tag)
             new_item.set("media-type", cover_media_type)
             new_item.set("id", cover_id)
