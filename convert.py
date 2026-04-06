@@ -119,6 +119,41 @@ def rasterize_svg_string(svg_text, width, height, font_spec=None, font_is_url=Fa
     return out
 
 
+def insert_cover(
+    tree: etree._ElementTree,
+    cover_href="images/cover.jpeg",
+    cover_id: str = "cover",
+    cover_media_type="image/jpeg",
+    area="manifest",
+    child="item",
+):
+    manifests = tree.xpath(f'//*[local-name()="{area}"]')
+    if manifests:
+        manifest = manifests[0]
+        items = manifest.xpath(f'*[local-name()="{child}"]')
+        cover_found = False
+        for item in items:
+            href = (item.get("href") or "").strip()
+            # detect existing cover reference or candidate cover entries
+            if href.lower().endswith(cover_href):
+                cover_found = True
+        # if no cover item exists, insert one at the beginning of manifest
+        if not cover_found:
+            # preserve namespace if present
+            manifest_tag = manifest.tag
+            if "}" in manifest_tag:
+                ns = manifest_tag[1 : manifest_tag.find("}")]
+                item_tag = f"{{{ns}}}item"
+            else:
+                item_tag = "item"
+            new_item = etree.Element(item_tag)
+            new_item.set("media-type", cover_media_type)
+            new_item.set("id", cover_id)
+            new_item.set("href", cover_href)
+            manifest.insert(0, new_item)
+    return tree
+
+
 def process_single_epub(epub_path, out_path, timeout, font_spec=None):
     base_name = os.path.basename(epub_path)
     tmp = tempfile.mkdtemp(prefix="epubproc_")
@@ -219,53 +254,24 @@ def process_single_epub(epub_path, out_path, timeout, font_spec=None):
                             )
                             tree = etree.parse(opf_path, parser)
                             # find manifest element robustly
-                            manifests = tree.xpath('//*[local-name()="manifest"]')
-                            if manifests:
-                                manifest = manifests[0]
-                                items = manifest.xpath('*[local-name()="item"]')
-                                cover_found = False
-                                for item in items:
-                                    href = (item.get("href") or "").strip()
-                                    iid = (item.get("id") or "").strip()
-                                    props = (item.get("properties") or "").strip()
-                                    # detect existing cover reference or candidate cover entries
-                                    if (
-                                        href.lower().endswith("images/cover.jpeg")
-                                        or href.lower().endswith("cover.jpeg")
-                                        or iid.lower() == "cover"
-                                        or "cover-image" in props
-                                        or "cover" in iid.lower()
-                                    ):
-                                        cover_found = True
-                                    # detect cover item by properties svg, by href pointing to cover.xhtml, or id containing 'cover'
-                                    if (
-                                        ("svg" in props)
-                                        or href.lower().endswith("cover.xhtml")
-                                        or "cover" in iid.lower()
-                                    ):
-                                        item.set("href", "images/cover.jpeg")
-                                        item.set("media-type", "image/jpeg")
-                                        if "properties" in item.attrib:
-                                            del item.attrib["properties"]
-                                        cover_found = True
-                                # if no cover item exists, insert one at the beginning of manifest
-                                if not cover_found:
-                                    # preserve namespace if present
-                                    manifest_tag = manifest.tag
-                                    if "}" in manifest_tag:
-                                        ns = manifest_tag[1 : manifest_tag.find("}")]
-                                        item_tag = f"{{{ns}}}item"
-                                    else:
-                                        item_tag = "item"
-                                    new_item = etree.Element(item_tag)
-                                    new_item.set("media-type", "image/jpeg")
-                                    new_item.set("id", "cover")
-                                    new_item.set("href", "images/cover.jpeg")
-                                    manifest.insert(0, new_item)
-                                # write back opf
-                                tree.write(
-                                    opf_path, encoding="utf-8", xml_declaration=True
-                                )
+                            tree = insert_cover(
+                                tree,
+                                cover_href="images/cover.jpeg",
+                                cover_id="cover",
+                                cover_media_type="image/jpeg",
+                                area="manifest",
+                                child="item",
+                            )
+                            tree = insert_cover(
+                                tree,
+                                cover_href="images/cover.jpeg",
+                                cover_id="cover",
+                                cover_media_type="image/jpeg",
+                                area="spine",
+                                child="itemref",
+                            )
+                            # write back opf
+                            tree.write(opf_path, encoding="utf-8", xml_declaration=True)
                         except Exception:
                             pass
                 except Exception:
